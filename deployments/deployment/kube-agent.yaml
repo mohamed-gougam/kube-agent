@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-agent
+  namespace: kube-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kube-agent
+  template:
+    metadata:
+      labels:
+        app: kube-agent
+    spec:
+      serviceAccountName: kube-agent
+      containers:
+      - image: mgnginx/kube-agent:edge
+        imagePullPolicy: Always
+        name: kube-agent
+        ports:
+        - name: http
+          containerPort: 80
+        - name: https
+          containerPort: 443
+        args:
+          - -v=3 # Enables extensive logging. Useful for troubleshooting.
+  

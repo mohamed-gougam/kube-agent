@@ -1,0 +1,10 @@
+upstream {{.Upstream.Name}} {
+    {{range $server := .Upstream.UpstreamServers}}
+    server {{$server.Address.IP}}:{{$server.Address.Port}};
+    {{end}}
+}
+
+server {
+    listen {{.ListenPort}};
+    proxy_pass {{.Upstream.Name}};
+}

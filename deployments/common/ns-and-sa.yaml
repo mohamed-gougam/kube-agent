@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kube-agent 
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-agent 
+  namespace: kube-agent

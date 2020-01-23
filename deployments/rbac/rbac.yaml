@@ -1,0 +1,42 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: kube-agent
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - k8s.nginx.org
+  resources:
+  - tcpservers
+  verbs:
+  - list
+  - watch
+  - get
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: kube-agent
+subjects:
+- kind: ServiceAccount
+  name: kube-agent
+  namespace: kube-agent
+roleRef:
+  kind: ClusterRole
+  name: kube-agent
+  apiGroup: rbac.authorization.k8s.io
