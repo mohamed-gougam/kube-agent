@@ -24,5 +24,6 @@ spec:
         - name: https
           containerPort: 443
         args:
+          - -logtostderr=true
           - -v=3 # Enables extensive logging. Useful for troubleshooting.
   

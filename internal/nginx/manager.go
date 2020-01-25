@@ -79,11 +79,12 @@ func NewLocalManager(confPath string, binaryFilename string, mc collectors.Manag
 	}
 
 	manager := LocalManager{
-		confdPath:             path.Join(confPath, "conf.d"),
-		secretsPath:           path.Join(confPath, "secrets"),
-		dhparamFilename:       path.Join(confPath, "secrets", "dhparam.pem"),
-		mainConfFilename:      path.Join(confPath, "nginx.conf"),
-		configVersionFilename: path.Join(confPath, "config-version.conf"),
+		confdPath:        path.Join(confPath, "conf.d"),
+		secretsPath:      path.Join(confPath, "secrets"),
+		dhparamFilename:  path.Join(confPath, "secrets", "dhparam.pem"),
+		mainConfFilename: path.Join(confPath, "nginx.conf"),
+		// CHANGE Added conf.d to the path
+		configVersionFilename: path.Join(confPath, "conf.d/config-version.conf"),
 		binaryFilename:        binaryFilename,
 		verifyConfigGenerator: verifyConfigGenerator,
 		configVersion:         0,

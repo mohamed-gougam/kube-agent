@@ -44,7 +44,7 @@ func generateNginxTCPServerCfg(tcpServerEx *TCPServerEx) *version1.TCPServerConf
 	result := &version1.TCPServerConf{
 		ListenPort: tcpServerEx.TCPServer.Spec.ListenPort,
 		Upstream: version1.Upstream{
-			Name:            getFileNameForTCPServer(tcpServerEx.TCPServer),
+			Name:            getUpstreamNameForTCPServer(tcpServerEx.TCPServer),
 			UpstreamServers: []version1.UpstreamServer{},
 		},
 	}
@@ -61,4 +61,8 @@ func generateNginxTCPServerCfg(tcpServerEx *TCPServerEx) *version1.TCPServerConf
 	result.Upstream.UpstreamServers = version1.NewDefaultTCPServerUpstreamServers()
 
 	return result
+}
+
+func getUpstreamNameForTCPServer(tcpServer *k8snginx_v1.TCPServer) string {
+	return fmt.Sprintf("tcps_%s_%s", tcpServer.Namespace, tcpServer.Name)
 }

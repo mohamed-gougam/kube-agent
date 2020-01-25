@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/mohamed-gougam/kube-agent/internal/configuration/version1"
-	k8snginx_v1 "github.com/mohamed-gougam/kube-agent/pkg/apis/k8snginx/v1"
 	"github.com/mohamed-gougam/kube-agent/internal/nginx"
+	k8snginx_v1 "github.com/mohamed-gougam/kube-agent/pkg/apis/k8snginx/v1"
 )
 
 // Configurer configures NGINX
@@ -70,9 +70,9 @@ func (cgr *Configurer) DeleteTCPServer(key string) error {
 }
 
 func getFileNameForTCPServer(tcpServer *k8snginx_v1.TCPServer) string {
-	return fmt.Sprintf("tcps_%s_%s", tcpServer.Namespace, tcpServer.Name)
+	return fmt.Sprintf("tcp/tcps_%s_%s", tcpServer.Namespace, tcpServer.Name)
 }
 
 func getFileNameForTCPServerFromKey(key string) string {
-	return fmt.Sprintf("tcps_%s", strings.Replace(key, "/", "_", -1))
+	return fmt.Sprintf("tcp/tcps_%s", strings.Replace(key, "/", "_", -1))
 }

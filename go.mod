@@ -25,6 +25,5 @@ require (
 	k8s.io/client-go v0.0.0-20200118233946-a432bd9ba7da
 	k8s.io/code-generator v0.18.0-alpha.2.0.20200122224840-a8714d90d04c
 	k8s.io/gengo v0.0.0-20191108084044-e500ee069b5c // indirect
-	k8s.io/klog v1.0.0
 	k8s.io/utils v0.0.0-20200109141947-94aeca20bf09 // indirect
 )

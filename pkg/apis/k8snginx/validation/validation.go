@@ -17,7 +17,7 @@ func validateTCPServerSpec(tcpServerSpec *v1.TCPServerSpec, fieldPath *field.Pat
 
 	errs = append(errs, validatePort(tcpServerSpec.ListenPort, fieldPath.Child("listenPort"))...)
 	errs = append(errs, validateServiceName(tcpServerSpec.ServiceName, fieldPath.Child("serviceName"))...)
-	errs = append(errs, validatePort(tcpServerSpec.ServicePort, fieldPath.Child("lservicePort"))...)
+	errs = append(errs, validatePort(tcpServerSpec.ServicePort, fieldPath.Child("servicePort"))...)
 
 	return errs
 }
@@ -31,9 +31,10 @@ func validatePort(port int, fieldPath *field.Path) field.ErrorList {
 		for _, msg := range validation.IsValidPortNum(port) {
 			errs = append(errs, field.Invalid(fieldPath, port, msg))
 		}
+		return errs
 	}
 
-	errs = append(errs, field.Invalid(fieldPath, port, "Port 37 is reserved Time."))
+	errs = append(errs, field.Invalid(fieldPath, port, "Port 37 is reserved for Time."))
 
 	return errs
 }
