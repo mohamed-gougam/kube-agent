@@ -14,5 +14,9 @@ spec:
     targetPort: 443
     protocol: TCP
     name: https
+  - port: 8888
+    targetPort: 8888
+    protocol: TCP
+    name: tcpss
   selector:
     app: kube-agent
