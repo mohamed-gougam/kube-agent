@@ -68,7 +68,6 @@ func NewController(kubeclient kubernetes.Interface,
 		kubeclient:       kubeclient,
 		confclient:       confclient,
 		servicesLister:   serviceInformer.Lister(),
-		servicesSynced:   serviceInformer.Informer().HasSynced,
 		endpointsLister:  endpointsInformer.Lister(),
 		endpointsSynced:  endpointsInformer.Informer().HasSynced,
 		podLister:        podInformer.Lister(),
@@ -112,43 +111,11 @@ func NewController(kubeclient kubernetes.Interface,
 		},
 	})
 
-	serviceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) {
-			svc := obj.(*corev1.Service)
-			glog.V(3).Infof("Queue Sync[service]: Checking and Adding all TCPServers of namespace %v with serviceName %v", svc.Namespace, svc.Name)
-			controller.enqueueList(controller.getTCPServersWithService(svc.Namespace, svc.Namespace))
-		},
-		DeleteFunc: func(obj interface{}) {
-			svc, isSvc := obj.(*corev1.Service)
-			if !isSvc {
-				delState, ok := obj.(cache.DeletedFinalStateUnknown)
-				if !ok {
-					glog.V(3).Infof("Error: received unexpected object: %v", obj)
-					return
-				}
-				svc, ok = delState.Obj.(*corev1.Service)
-				if !ok {
-					glog.V(3).Infof("Error DeletedFinalStateUnknown contained non service object: %v", delState.Obj)
-					return
-				}
-			}
-			glog.V(3).Infof("Queue Sync[service]: Removing all TCPServers in namespace %v with serviceName %v", svc.Namespace, svc.Name)
-			controller.enqueueList(controller.getTCPServersWithService(svc.Namespace, svc.Name))
-		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
-			if !reflect.DeepEqual(oldObj, newObj) {
-				svc := newObj.(*corev1.Service)
-				glog.V(3).Infof("Queue Sync[service]: Updating all TCPServers of namespace %v with serviceName %v", svc.Namespace, svc.Name)
-				controller.enqueueList(controller.getTCPServersWithService(svc.Namespace, svc.Name))
-			}
-		},
-	})
-
 	endpointsInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ept := obj.(*corev1.Endpoints)
 			glog.V(3).Infof("Queue Sync[endpoints]: Checking and Adding all TCPServers of namespace %v with serviceName %v", ept.Namespace, ept.Name)
-			controller.enqueueList(controller.getTCPServersWithEndpoints(ept.Namespace, ept.Name))
+			controller.enqueueList(controller.getTCPServersForEndpoints(ept.Namespace, ept.Name))
 		},
 		DeleteFunc: func(obj interface{}) {
 			ept, isEpt := obj.(*corev1.Endpoints)
@@ -165,13 +132,13 @@ func NewController(kubeclient kubernetes.Interface,
 				}
 			}
 			glog.V(3).Infof("Queue Sync[endpoints]: Removing all TCPServers in namespace %v with serviceName %v", ept.Namespace, ept.Name)
-			controller.enqueueList(controller.getTCPServersWithEndpoints(ept.Namespace, ept.Name))
+			controller.enqueueList(controller.getTCPServersForEndpoints(ept.Namespace, ept.Name))
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			if !reflect.DeepEqual(oldObj, newObj) {
 				ept := newObj.(*corev1.Endpoints)
 				glog.V(3).Infof("Queue Sync[endpoints]: Updating all TCPServers of namespace %v with serviceName %v", ept.Namespace, ept.Name)
-				controller.enqueueList(controller.getTCPServersWithEndpoints(ept.Namespace, ept.Name))
+				controller.enqueueList(controller.getTCPServersForEndpoints(ept.Namespace, ept.Name))
 			}
 		},
 	})
@@ -188,7 +155,7 @@ func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
 
 	// Wait for the caches to be synced before starting workers
 	glog.Info("Waiting for services informer caches to sync")
-	if ok := cache.WaitForCacheSync(stopCh, c.servicesSynced, c.tcpServersSynced, c.endpointsSynced); !ok {
+	if ok := cache.WaitForCacheSync(stopCh, c.tcpServersSynced, c.endpointsSynced); !ok {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
 
@@ -271,7 +238,7 @@ func (c *Controller) syncTCPServers(key string) error {
 			}
 			return nil
 		}
-		// network/transient error
+		// network/transient error, retry
 		return err
 	}
 
@@ -292,6 +259,7 @@ func (c *Controller) syncTCPServers(key string) error {
 			c.addOrUpdateTCPServerSync(tcps, &corev1.Service{}, &corev1.Endpoints{})
 			return nil
 		}
+		// network/transient error, retry
 		return err
 	}
 
@@ -302,6 +270,8 @@ func (c *Controller) syncTCPServers(key string) error {
 			c.addOrUpdateTCPServerSync(tcps, svc, &corev1.Endpoints{})
 			return nil
 		}
+		// network/transient error, retry
+		return err
 	}
 
 	glog.V(2).Infof("Adding or updating TCPServer %v\n", key)
@@ -314,7 +284,7 @@ func (c *Controller) syncTCPServers(key string) error {
 func (c *Controller) addOrUpdateTCPServerSync(tcps *k8snginx_v1.TCPServer, svc *corev1.Service, endpoints *corev1.Endpoints) {
 	var stcpAdrs []string
 
-	adrs, err := c.getEndpointsWithServiceAndPort(tcps.Spec.ServicePort, svc, endpoints)
+	adrs, err := c.getEndpointsForServiceAndPort(tcps.Spec.ServicePort, svc, endpoints)
 	if err != nil {
 		glog.V(3).Infof("Error getting endpoints for service %s/%s port %v: %v", svc.Namespace, svc.Name, tcps.Spec.ServicePort, err)
 	} else {
@@ -351,19 +321,14 @@ func (c *Controller) enqueueList(tcpss []*k8snginx_v1.TCPServer) {
 	}
 }
 
-func (c *Controller) getTCPServersWithEndpoints(endpointsNamespace, endpointsName string) []*k8snginx_v1.TCPServer {
-	// Enpoints Namespace and Name matchs exactly the service using them.
-	return c.getTCPServersWithService(endpointsNamespace, endpointsName)
-}
-
-// Returns all TCPServers that have serviceName == service.Name and namespace == service.Namespace
-func (c *Controller) getTCPServersWithService(serviceNamespace, serviceName string) []*k8snginx_v1.TCPServer {
+// Returns all TCPServers that have serviceName == endpoints.Name and namespace == endpoints.Namespace
+func (c *Controller) getTCPServersForEndpoints(endpointsNamespace, endpointsName string) []*k8snginx_v1.TCPServer {
 	var result []*k8snginx_v1.TCPServer
 
-	tcpss := c.getTCPServersInNamespace(serviceNamespace)
+	tcpss := c.getTCPServersInNamespace(endpointsNamespace)
 
 	for _, tcps := range tcpss {
-		if tcps.Spec.ServiceName == serviceName {
+		if tcps.Spec.ServiceName == endpointsName {
 			glog.V(3).Infof("Queue sync: TCPServer %s/%s synced.", tcps.Namespace, tcps.Name)
 			result = append(result, tcps)
 		}
@@ -386,7 +351,7 @@ func (c *Controller) getTCPServersInNamespace(namespace string) []*k8snginx_v1.T
 	return result
 }
 
-func (c *Controller) getEndpointsWithServiceAndPort(tcpsServicePort int, svc *corev1.Service, endpoints *corev1.Endpoints) ([]string, error) {
+func (c *Controller) getEndpointsForServiceAndPort(tcpsServicePort int, svc *corev1.Service, endpoints *corev1.Endpoints) ([]string, error) {
 	var targetPort int32
 	var err error
 
@@ -419,7 +384,7 @@ func (c *Controller) getEndpointsWithServiceAndPort(tcpsServicePort int, svc *co
 	return nil, fmt.Errorf("No endpoints for target port %v in service %s", targetPort, svc.Name)
 }
 
-// COPIED
+// Integrated from nginx-ingress
 func (c *Controller) getTargetPort(svcPort *corev1.ServicePort, svc *corev1.Service) (int32, error) {
 	if (svcPort.TargetPort == intstr.IntOrString{}) {
 		return svcPort.Port, nil

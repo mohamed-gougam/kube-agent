@@ -1,8 +1,8 @@
 # kube-agent
 A simple agent in Go that monitors special "TCPServer" custom resources in Kubernetes cluster, converts those resources into NGINX configuration and applies that configuration to NGINX. We can think of this agent as a simple Controller that only understands that special custom resource.
 
-# Testing kube-agent
-This explains how to test kube-agent. This repo contains also a simple tcp server go app that we will use as our service in kubernetes, and thekube-agent will load balance traffic to it.
+# Installing and Testing the kube-agent
+This explains how to test kube-agent. This repo contains also a simple NGINX tcp server app that we will use as our service in kubernetes, and the kube-agent will load balance traffic to it.
 
 Before following the instructions below, clone this repo locally:
 
@@ -12,20 +12,25 @@ $ git clone https://github.com/mohamed-gougam/kube-agent.git
 
 ## 1. Build and push kube-agent image
 
+## 1.1 Makefile
+
+Makefile targets:
+- **kube-agent:** runs Go build and results kube-agent binary file.
+- **update-codegen:** updates the generated kubernetes client code.
+- **verify-codegen:** verifies that the actual generated code is up to date.
+- **container:** builds the docker image locally after veifying the generated code and building kube-agent.
+- **push:** pushes the image to registry after building it.
+- **clean:** cleans the repo by deleting the binary kube-agent file.
+
 ```
 $ cd kube-agent
-
-$ GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o kube-agent github.com/mohamed-gougam/kube-agent/cmd/kube-agent/
-
-$ docker build -t kube-agent -f build/Dockerfile .
 ```
 
-Push the image to your docker repository using your prfix and tag.
+Edit PREFIX, TAG and VERSION variables in the makefile to match your docker registry.
+```
+$ make
+```
 
-```
-$ docker tag kube-agent:latest <PREFIX>/kube-agent:<TAG>
-$ docker push <PREFIX>/kube-agent:<TAG>
-```
 An image is already built and can be pulled from `mgnginx/kube-agent:edge`, it is the image we are using to deploy the kube-agent in kubernetes.
 
 ## 2. Deploy the kube-agent
@@ -74,10 +79,6 @@ Since no service exist with the name `tcpserver-coffee-svc` in the namespace `de
 ```
 $ nc <kube-agent-node-IP> <node-8888-binded-port>
 ```
-or curl also works:
-```
-$ curl <kube-agent-node-IP>:<node-8888-binded-port>
-```
 
 Result should be:
 ```
@@ -100,7 +101,7 @@ $ kubectl apply -f tcpserver-coffee.yaml
 
 The kube-agent will now serve `tcpserver-coffee-svc` on listenPort:
 ```
-$ curl <kube-agent-node-IP>:<node-8888-binded-port>
+$ nc <kube-agent-node-IP> <node-8888-binded-port>
 ```
 
 Result should be:
