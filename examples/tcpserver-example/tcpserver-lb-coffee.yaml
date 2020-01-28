@@ -1,8 +1,0 @@
-apiVersion: k8s.nginx.org/v1
-kind: TCPServer
-metadata:
-  name: tcpserver-lb-coffee
-spec:
-  listenPort: 8888
-  serviceName: tcpserver-coffee-svc
-  servicePort: 54321

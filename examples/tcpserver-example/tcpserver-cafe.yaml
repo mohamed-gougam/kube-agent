@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tcpserver-coffee
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: tcpserver-coffee
+  template:
+    metadata:
+      labels:
+        app: tcpserver-coffee
+    spec:
+      containers:
+      - name: tcpserver-coffee
+        image: mgnginx/tcpserver-example:latest
+        ports:
+        - containerPort: 12345
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tcpserver-coffee-svc
+spec:
+  ports:
+  - port: 11111
+    targetPort: 12345
+    protocol: TCP
+    name: sometcpport
+  selector:
+    app: tcpserver-coffee
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tcpserver-tea
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: tcpserver-tea
+  template:
+    metadata:
+      labels:
+        app: tcpserver-tea
+    spec:
+      containers:
+      - name: tcpserver-tea
+        image: mgnginx/tcpserver-example:latest
+        ports:
+        - containerPort: 12345
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tcpserver-tea-svc
+spec:
+  ports:
+  - port: 22222
+    targetPort: 12345
+    protocol: TCP
+    name: sometcpport
+  selector:
+    app: tcpserver-tea

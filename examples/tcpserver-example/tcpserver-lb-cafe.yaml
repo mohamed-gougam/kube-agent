@@ -1,0 +1,17 @@
+apiVersion: k8s.nginx.org/v1
+kind: TCPServer
+metadata:
+  name: tcpserver-lb-coffee
+spec:
+  listenPort: 8888
+  serviceName: tcpserver-coffee-svc
+  servicePort: 11111
+---
+apiVersion: k8s.nginx.org/v1
+kind: TCPServer
+metadata:
+  name: tcpserver-lb-tea
+spec:
+  listenPort: 9999
+  serviceName: tcpserver-tea-svc
+  servicePort: 22222

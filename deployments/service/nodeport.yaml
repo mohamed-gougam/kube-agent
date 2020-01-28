@@ -17,6 +17,10 @@ spec:
   - port: 8888
     targetPort: 8888
     protocol: TCP
-    name: tcpss
+    name: tcpss1
+  - port: 9999
+    targetPort: 9999
+    protocol: TCP
+    name: tcpss2
   selector:
     app: kube-agent

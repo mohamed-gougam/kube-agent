@@ -26,7 +26,7 @@ Makefile targets:
 $ cd kube-agent
 ```
 
-Edit PREFIX, TAG and VERSION variables in the makefile to match your docker registry.
+Edit PREFIX, TAG and VERSION variables in the makefile to match your docker registry. Default target is set to `push`:
 ```
 $ make
 ```
@@ -54,28 +54,28 @@ $ kubctl -n kube-agent get pods
 
 ## 3. Access the kube-agent
 
-Create a service of type NodePort, here we are exposing ports 80, 443 (will serve with NGINX first install config) and port 8888 to test a simple tcp server later:
+Create a service of type NodePort, here we are exposing ports 80, 443 (will serve with NGINX first install config). Ports 8888 and 9999 to test the tcp servers resources later:
 ```
 $ kubectl apply -f service/nodeport.yaml
 
 $ kubectl -n kube-agent get svc
 ```
-Take note of the corresponding port binding port 8888.
+Take note of the corresponding ports binding port 8888 and 9999.
 
-## 4. Create and test the TCPServer resource
+## 4. Create and test the TCPServer resources
 
 ### 4.1 TCPServer
 
 We can create either the TCPServer first or the service that the TCPServer will reference first. If we create the TCPServer with spec.serviceName of a non existant service (or a service that has no endpoints) in the TCPServer's namespace, kube-agent will serve time on spec.listenPort with background port 37 (NGINX side).
 
-Create the first TCPServer object:
+First create two TCPServer objects:
 ```
 $ cd examples/tcpserver-example
 
-$ kubectl apply -f tcpserver-lb-coffee.yaml
+$ kubectl apply -f tcpserver-lb-cafe.yaml
 ```
 
-Since no service exist with the name `tcpserver-coffee-svc` in the namespace `default` kube-agent will serve time in the port `8888`.
+Since no service exist with the name `tcpserver-coffee-svc` nor `tcpserver-tea-svc` in the namespace `default` kube-agent will serve time in the port `8888` and `9999`.
 ```
 $ nc <kube-agent-node-IP> <node-8888-binded-port>
 ```
@@ -85,21 +85,23 @@ Result should be:
 2020-01-27T01:14:53+00:00
 ```
 
-### 4.2 Service
+### 4.2 Services
 
 We created a simple NGINX webserver. See `examples/tcpserver-example/Dockerfile` and the `.conf` files.
 
 Build and push the image to your repo or use `mgnginx/tcpserver-example:latest` image.
 
 **Note:**
-If you are using your own image, make sure to edit the tcpserver-coffee.yaml file.
+If you are using your own image, make sure to edit the tcpserver-cafe.yaml file.
 
-Create the service `tcpserver-coffee-svc`:
+Create the services `tcpserver-coffee-svc` and `tcpserver-tea-svc`:
 ```
-$ kubectl apply -f tcpserver-coffee.yaml
+$ kubectl apply -f tcpserver-cafe.yaml
 ```
 
-The kube-agent will now serve `tcpserver-coffee-svc` on listenPort:
+The kube-agent will now serve `tcpserver-coffee-svc` and `tcpserver-tea-svc` on respective listenPorts.
+
+Test `tcpserver-coffee-svc`:
 ```
 $ nc <kube-agent-node-IP> <node-8888-binded-port>
 ```
@@ -108,7 +110,20 @@ Result should be:
 ```
 Server address: 172.17.0.4:12345
 Server name: tcpserver-coffee-d67db4598-772vl
-Date: 27/Jan/2020:01:15:18 +0000
+Date: 27/Jan/2020:04:36:58 +0000
+Connection serial/server: 1
+```
+
+Test `tcpserver-tea-svc`:
+```
+$ nc <kube-agent-node-IP> <node-9999-binded-port>
+```
+
+Result should be:
+```
+Server address: 172.17.0.5:12345
+Server name: tcpserver-tea-67b5dd6b68-kx2jk
+Date: 27/Jan/2020:04:37:04 +0000
 Connection serial/server: 1
 ```
 
